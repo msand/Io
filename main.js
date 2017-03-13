@@ -1,7 +1,7 @@
 /*jslint forin: true, plusplus: true */
 (function(root) {
   "use strict";
-  function Io() {
+  function Io(fromObj) {
     var currentLeaf = this, lastLeafVersion = 0, view = Object.create(null);
 
     Object.defineProperty(this, "lastLeafVersion", {
@@ -14,7 +14,7 @@
         return lastLeafVersion;
       }
     });
-    this.timestamp();
+    this.timestamp(fromObj);
     Object.defineProperty(this, "root", {
       configurable: false,
       enumerable: false,
@@ -73,13 +73,14 @@
     configurable: false,
     enumerable: false,
     writable: false,
-    value: function() {
-      Object.defineProperty(this, "date", {
-        configurable: false,
-        enumerable: true,
-        writable: false,
-        value: new Date()
-      });
+    value: function(fromObj) {
+      this.hasOwnProperty("date") ||
+        Object.defineProperty(this, "date", {
+          configurable: false,
+          enumerable: true,
+          writable: false,
+          value: fromObj ? new Date(fromObj.date) : new Date()
+        });
     }
   });
   Object.defineProperty(Io.prototype, "up", {
@@ -116,7 +117,7 @@
               value: keyOrProps[name],
               configurable: false,
               enumerable: true,
-              writable: false
+              writable: name === "branches" || name === "version"
             });
           }
         }
@@ -145,6 +146,43 @@
       this.root.currentLeaf = up;
 
       return up;
+    }
+  });
+
+  Object.defineProperty(Io, "fromJSON", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: function(json) {
+      return Io.fromParsedJSON(JSON.parse(json));
+    }
+  });
+
+  function walkBranches(branch, parent, parents, versions) {
+    var branches = branch.branches;
+    for (var b = 0; b < branches.length; b++) {
+      var child = branches[b];
+      var version = child.version;
+      versions[version] = child;
+      parents[version] = parent;
+    }
+  }
+
+  Object.defineProperty(Io, "fromParsedJSON", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: function(obj) {
+      var io = new Io(obj);
+      var branches = [];
+      var parents = [];
+      walkBranches(obj, io, parents, branches);
+      for (var i = 1; i < branches.length; i++) {
+        var branch = branches[i];
+        var parent = parents[branch.version].up(branch);
+        walkBranches(branch, parent, parents, branches);
+      }
+      return io;
     }
   });
 

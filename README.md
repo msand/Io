@@ -55,7 +55,8 @@ var branch2_1 = branch2.up({
 ## Infinite Object - main version
 Proper api
 ```javascript
-// Root and branches are immutable (sealed) and 
+(function () {
+// Root and branches are immutable (sealed) and
 // all properties are non-configurable and non-writeable after creation
 var root = new Io(),
   infiniteWhiteSpaceCollection = [root],
@@ -88,10 +89,15 @@ console.log(root === branch21.root);
 // which has all the properties from the prototype chain (excluding root) of the current leaf
 var view = root.view;
 for (var key in branch211) {
-  assert(this.root.hasOwnProperty(key) || (key in view) && view[key] === branch211[key]);
+  console.log(
+    root.hasOwnProperty(key) || key in view && view[key] === branch211[key]
+  );
 }
 for (var key in view) {
-  assert(this.root.hasOwnProperty(key) || (key in branch211) && view[key] === branch211[key]);
+  console.log(
+    root.hasOwnProperty(key) ||
+      key in branch211 && view[key] === branch211[key]
+  );
 }
 
 // Change version to parent branch
@@ -100,8 +106,16 @@ root.currentLeaf = Object.getPrototypeOf(branch211);
 // Every branch has a timestamp
 console.log(branch11.date < branch211.date);
 
-// Can serialize to JSON
-document.getElementById("output").innerHTML = JSON.stringify(
+// Can de/serialize from/to JSON
+var jsonIo = JSON.stringify(root);
+var parsedIo = Io.fromJSON(jsonIo);
+var reStringified = JSON.stringify(parsedIo);
+console.log("JSON idempotent: " + (reStringified === jsonIo));
+
+var jsonArr = document.getElementById("output").innerHTML = JSON.stringify(
   infiniteWhiteSpaceCollection
 );
+var parsedArr = JSON.parse(jsonArr);
+var parsedFromArr = Io.fromParsedJSON(parsedArr[0]);
+})();
 ```
