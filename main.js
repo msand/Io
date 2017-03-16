@@ -21,10 +21,12 @@ function exportIo(global) {
   }
 
   var reservedPropertyNames = ["branch", "branches", "version"];
+  
+  var hasOwnProp = Object.prototype.hasOwnProperty;
 
   function io() {
     var root = {};
-    var version = 0;
+    var maxVersion = 0;
     var currentBranch = root;
 
     Object.defineProperty(root, "root", {
@@ -34,7 +36,7 @@ function exportIo(global) {
       value: root
     });
 
-    function branchFrom(parent, parentBranches) {
+    function branchFrom(parent, addBranch) {
       return function branchUsing(keyOrProps, value) {
         var numParams = arguments.length;
         if (numParams === 0 || numParams > 2) {
@@ -46,7 +48,7 @@ function exportIo(global) {
         if (numParams === 2) {
           if (
             typeof keyOrProps !== "string" ||
-              reservedPropertyNames.indexOf(keyOrProps) !== -1
+            reservedPropertyNames.indexOf(keyOrProps) !== -1
           ) {
             throw new TypeError(
               "Key must be string and not in: " + reservedPropertyNames
@@ -77,22 +79,28 @@ function exportIo(global) {
 
         timestamp(branch);
 
-        version += 1;
+        maxVersion += 1;
 
         Object.defineProperty(branch, "version", {
-          value: version,
+          value: maxVersion,
           configurable: false,
           enumerable: true,
           writable: false
         });
 
         var branches = [];
+        var branchesView = Object.freeze(branches.slice());
+
+        function addBranchAndUpdateView(branch) {
+          branches.push(branch);
+          branchesView = Object.freeze(branches.slice());
+        }
 
         Object.defineProperty(branch, "branches", {
           configurable: false,
           enumerable: true,
           get: function getBranches() {
-            return branches.slice();
+            return branchesView;
           }
         });
 
@@ -100,18 +108,26 @@ function exportIo(global) {
           configurable: false,
           enumerable: false,
           writable: false,
-          value: Object.freeze(branchFrom(branch, branches))
+          value: Object.freeze(branchFrom(branch, addBranchAndUpdateView))
         });
 
         Object.freeze(branch);
 
-        parentBranches.push(branch);
+        addBranch(branch);
 
         root.currentBranch = branch;
 
         return branch;
       };
     }
+
+    Object.defineProperty(root, "maxVersion", {
+      configurable: false,
+      enumerable: true,
+      get: function getMaxVersion() {
+        return maxVersion;
+      }
+    });
 
     var view = Object.create(null);
 
@@ -130,7 +146,14 @@ function exportIo(global) {
         return currentBranch;
       },
       set: function setCurrentBranch(branch) {
-        var key;
+        function setViewProp(key) {
+          if (!hasOwnProp.call(view, key) && !hasOwnProp.call(root, key)) {
+            view[key] = branch[key];
+          }
+        }
+        if (currentBranch === branch) {
+          return branch;
+        }
         if (!root.isPrototypeOf(branch)) {
           throw new TypeError(
             "Only infinite objects which are extensions of this root are allowed"
@@ -142,10 +165,10 @@ function exportIo(global) {
           });
         } else {
           view = Object.create(null);
-          for (key in branch) {
-            if (key !== "view" && key !== "branches") {
-              view[key] = branch[key];
-            }
+          var obj = branch;
+          while (obj !== root) {
+            Object.keys(obj).forEach(setViewProp);
+            obj = Object.getPrototypeOf(obj);
           }
         }
         currentBranch = branch;
@@ -154,19 +177,25 @@ function exportIo(global) {
     });
 
     var rootBranches = [];
+    var branchesView = Object.freeze(rootBranches.slice());
+
+    function addBranchAndUpdateView(branch) {
+      rootBranches.push(branch);
+      branchesView = Object.freeze(rootBranches.slice());
+    }
 
     Object.defineProperty(root, "branch", {
       configurable: false,
       enumerable: false,
       writable: false,
-      value: Object.freeze(branchFrom(root, rootBranches))
+      value: Object.freeze(branchFrom(root, addBranchAndUpdateView))
     });
 
     Object.defineProperty(root, "branches", {
       configurable: false,
       enumerable: true,
       get: function getBranches() {
-        return rootBranches.slice();
+        return branchesView;
       }
     });
 
@@ -185,18 +214,15 @@ function exportIo(global) {
 
   function fromParsedJSON(obj) {
     var root = io();
-    var branches = [];
-    var parents = [];
-    var branch;
-    var parent;
-    var i;
-    walkBranches(obj, root, parents, branches);
-    for (i = 1; i < branches.length; i += 1) {
-      branch = branches[i];
-      parent = parents[branch.version].branch(branch);
-      branches[i] = parent;
-      walkBranches(branch, parent, parents, branches);
-    }
+    var versions = [];
+    versions.length = obj.maxVersion + 1;
+    var parents = Array.apply(null, versions);
+    var branches = Array.apply(null, versions);
+    branches = branches.map(function importBranch(branch) {
+      var parent = branch ? parents[branch.version].branch(branch) : root;
+      walkBranches(branch || obj, parent, parents, branches);
+      return parent;
+    });
     root.currentBranch = branches[obj.view.version];
     return root;
   }

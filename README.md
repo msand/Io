@@ -98,7 +98,7 @@ Proper api, requires ES5
   root.currentBranch = Object.getPrototypeOf(branch211);
 
   // root.view === branchN.view contains an Object without prototype [Object.create(null)] which has all
-  // the properties from the prototype chain (excluding view and branches) of the currently active branch.
+  // the properties from the prototype chain (excluding root) of the currently active branch.
   // Enabling fast existence checking of and access to the current properties,
   // without repeated prototype chain traversal.
   var view = root.view;
