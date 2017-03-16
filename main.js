@@ -1,6 +1,12 @@
-/*jslint browser: true*/
+/*jslint browser: true, white: true*/
 /*global define, module, window*/
-(function (factory) {
+/*property
+ amd, apply, branch, branches, call, configurable, create, currentBranch,
+ defineProperty, enumerable, exports, forEach, freeze, get, getPrototypeOf,
+ hasOwnProperty, indexOf, io, isPrototypeOf, keys, length, map, numVersions,
+ parse, prototype, push, set, slice, value, version, view, writable
+ */
+(function ioExporter(factory) {
   "use strict";
   if (typeof define === "function" && define.amd) {
     // AMD. Register as an anonymous module.
@@ -42,7 +48,7 @@
 
   function io() {
     var root = {};
-    var maxVersion = 0;
+    var numVersions = 0;
     var currentBranch = root;
 
     Object.defineProperty(root, "root", {
@@ -64,7 +70,7 @@
         if (numParams === 2) {
           if (
             typeof keyOrProps !== "string" ||
-            reservedPropertyNames.indexOf(keyOrProps) !== -1
+              reservedPropertyNames.indexOf(keyOrProps) !== -1
           ) {
             throw new TypeError(
               "Key must be string and not in: " + reservedPropertyNames
@@ -95,14 +101,14 @@
 
         timestamp(branch);
 
-        maxVersion += 1;
-
         Object.defineProperty(branch, "version", {
-          value: maxVersion,
+          value: numVersions,
           configurable: false,
           enumerable: true,
           writable: false
         });
+
+        numVersions += 1;
 
         var branches = [];
         var branchesView = Object.freeze(branches.slice());
@@ -137,11 +143,11 @@
       };
     }
 
-    Object.defineProperty(root, "maxVersion", {
+    Object.defineProperty(root, "numVersions", {
       configurable: false,
       enumerable: true,
-      get: function getMaxVersion() {
-        return maxVersion;
+      get: function getNumVersions() {
+        return numVersions;
       }
     });
 
@@ -220,24 +226,25 @@
     return root;
   }
 
-  function walkBranches(branch, parent, parents, versions) {
-    branch.branches.forEach(function walkBranch(child) {
+  function walkBranches(source, sources, parents, branch) {
+    source.branches.forEach(function walkBranch(child) {
       var childVersion = child.version;
-      versions[childVersion] = child;
-      parents[childVersion] = parent;
+      sources[childVersion] = child;
+      parents[childVersion] = branch;
     });
   }
 
   function fromParsedJSON(obj) {
     var root = io();
     var versions = [];
-    versions.length = obj.maxVersion + 1;
+    versions.length = obj.numVersions;
     var parents = Array.apply(null, versions);
-    var branches = Array.apply(null, versions);
-    branches = branches.map(function importBranch(branch) {
-      var parent = branch ? parents[branch.version].branch(branch) : root;
-      walkBranches(branch || obj, parent, parents, branches);
-      return parent;
+    var sources = Array.apply(null, versions);
+    walkBranches(obj, sources, parents, root);
+    var branches = sources.map(function importBranch(source) {
+      var branch = parents[source.version].branch(source);
+      walkBranches(source, sources, parents, branch);
+      return branch;
     });
     root.currentBranch = branches[obj.view.version];
     return root;

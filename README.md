@@ -77,7 +77,7 @@ Proper api, requires ES5
   console.log(root.branches[0] === branch1);
 
   // Branches have a version number
-  console.log(branch1.version === 1);
+  console.log(branch1.version === 0);
   console.log(branch1.version + 1 === branch2.version);
 
   // The root (and thus branches) has a reference to the current branch
