@@ -43,17 +43,6 @@ function exportIo(global) {
 
         var branch = Object.create(parent);
 
-        parentBranches.push(branch);
-
-        version += 1;
-
-        Object.defineProperty(branch, "version", {
-          value: version,
-          configurable: false,
-          enumerable: true,
-          writable: false
-        });
-
         if (numParams === 2) {
           if (
             typeof keyOrProps !== "string" ||
@@ -88,6 +77,15 @@ function exportIo(global) {
 
         timestamp(branch);
 
+        version += 1;
+
+        Object.defineProperty(branch, "version", {
+          value: version,
+          configurable: false,
+          enumerable: true,
+          writable: false
+        });
+
         var branches = [];
 
         Object.defineProperty(branch, "branches", {
@@ -106,6 +104,8 @@ function exportIo(global) {
         });
 
         Object.freeze(branch);
+
+        parentBranches.push(branch);
 
         root.currentBranch = branch;
 
