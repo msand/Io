@@ -1,4 +1,3 @@
-/*jslint for: true, this: true, white: true */
 function exportIo(global) {
   "use strict";
   function isObject(value) {
@@ -9,217 +8,244 @@ function exportIo(global) {
       return false;
     }
   }
-  function Io(fromObj) {
-    var root = this;
-    var currentLeaf = this;
-    var lastLeafVersion = 0;
-    var view = Object.create(null);
 
-    Object.defineProperty(this, "lastLeafVersion", {
-      configurable: false,
-      enumerable: true,
-      set: function() {
-        lastLeafVersion += 1;
-        return lastLeafVersion;
-      },
-      get: function() {
-        return lastLeafVersion;
-      }
-    });
-    this.timestamp(fromObj);
-    Object.defineProperty(this, "root", {
+  function timestamp(obj) {
+    if (!obj.hasOwnProperty("date")) {
+      Object.defineProperty(obj, "date", {
+        configurable: false,
+        enumerable: true,
+        writable: false,
+        value: new Date()
+      });
+    }
+  }
+
+  var reservedPropertyNames = ["branch", "branches", "version"];
+
+  function io() {
+    var root = {};
+    var version = 0;
+    var currentBranch = root;
+
+    Object.defineProperty(root, "root", {
       configurable: false,
       enumerable: false,
       writable: false,
-      value: this
+      value: root
     });
-    Object.defineProperty(this, "view", {
+
+    function branchFrom(parent, parentBranches) {
+      return function branchUsing(keyOrProps, value) {
+        var numParams = arguments.length;
+        if (numParams === 0 || numParams > 2) {
+          throw new Error("Wrong number of parameters");
+        }
+
+        var branch = Object.create(parent);
+
+        parentBranches.push(branch);
+
+        version += 1;
+
+        Object.defineProperty(branch, "version", {
+          value: version,
+          configurable: false,
+          enumerable: true,
+          writable: false
+        });
+
+        if (numParams === 2) {
+          if (
+            typeof keyOrProps !== "string" ||
+              reservedPropertyNames.indexOf(keyOrProps) !== -1
+          ) {
+            throw new TypeError(
+              "Key must be string and not in: " + reservedPropertyNames
+            );
+          }
+          Object.defineProperty(branch, keyOrProps, {
+            configurable: false,
+            enumerable: true,
+            writable: false,
+            value: value
+          });
+        } else if (numParams === 1) {
+          if (!isObject(keyOrProps)) {
+            throw new TypeError("Props must be object");
+          }
+          Object.keys(keyOrProps).forEach(function setProp(key) {
+            if (reservedPropertyNames.indexOf(key) !== -1) {
+              return;
+            }
+            Object.defineProperty(branch, key, {
+              value: keyOrProps[key],
+              configurable: false,
+              enumerable: true,
+              writable: false
+            });
+          });
+        }
+
+        timestamp(branch);
+
+        var branches = [];
+
+        Object.defineProperty(branch, "branches", {
+          configurable: false,
+          enumerable: true,
+          get: function getBranches() {
+            return branches.slice();
+          }
+        });
+
+        Object.defineProperty(branch, "branch", {
+          configurable: false,
+          enumerable: false,
+          writable: false,
+          value: Object.freeze(branchFrom(branch, branches))
+        });
+
+        Object.freeze(branch);
+
+        root.currentBranch = branch;
+
+        return branch;
+      };
+    }
+
+    var view = Object.create(null);
+
+    Object.defineProperty(root, "view", {
       configurable: false,
       enumerable: true,
-      get: function() {
+      get: function getView() {
         return view;
       }
     });
-    Object.defineProperty(this, "currentLeaf", {
+
+    Object.defineProperty(root, "currentBranch", {
       configurable: false,
       enumerable: false,
-      get: function() {
-        return currentLeaf;
+      get: function getCurrentBranch() {
+        return currentBranch;
       },
-      set: function(newLeaf) {
+      set: function setCurrentBranch(branch) {
         var key;
-        if (!root.isPrototypeOf(newLeaf)) {
+        if (!root.isPrototypeOf(branch)) {
           throw new TypeError(
             "Only infinite objects which are extensions of this root are allowed"
           );
         }
-        if (Object.getPrototypeOf(newLeaf) === currentLeaf) {
-          for (key in newLeaf) {
-            if (newLeaf.hasOwnProperty(key)) {
-              view[key] = newLeaf[key];
-            }
-          }
+        if (Object.getPrototypeOf(branch) === currentBranch) {
+          Object.keys(branch).forEach(function setProp(key) {
+            view[key] = branch[key];
+          });
         } else {
           view = Object.create(null);
-          for (key in newLeaf) {
-            if (!this.root.hasOwnProperty(key) || key === "date") {
-              view[key] = newLeaf[key];
+          for (key in branch) {
+            if (key !== "view" && key !== "branches") {
+              view[key] = branch[key];
             }
           }
         }
-        currentLeaf = newLeaf;
-        return currentLeaf;
+        currentBranch = branch;
+        return currentBranch;
       }
     });
-    Object.defineProperty(this, "branches", {
+
+    var rootBranches = [];
+
+    Object.defineProperty(root, "branch", {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: Object.freeze(branchFrom(root, rootBranches))
+    });
+
+    Object.defineProperty(root, "branches", {
       configurable: false,
       enumerable: true,
-      writable: false,
-      value: []
+      get: function getBranches() {
+        return rootBranches.slice();
+      }
     });
-    Object.seal(this);
+
+    Object.freeze(root);
+
+    return root;
   }
-
-  Object.defineProperty(Io.prototype, "timestamp", {
-    configurable: false,
-    enumerable: false,
-    writable: false,
-    value: function(fromObj) {
-      if (!this.hasOwnProperty("date")) {
-        Object.defineProperty(this, "date", {
-          configurable: false,
-          enumerable: true,
-          writable: false,
-          value: fromObj ? new Date(fromObj.date) : new Date()
-        });
-      }
-    }
-  });
-  Object.defineProperty(Io.prototype, "up", {
-    configurable: false,
-    enumerable: false,
-    writable: false,
-    value: function(keyOrProps, value) {
-      var numParams = arguments.length;
-      var props;
-      var name;
-      var up;
-      var l;
-      var i;
-      if (numParams === 0 || numParams > 2) {
-        throw new Error("Wrong number of parameters");
-      }
-
-      up = Object.create(this);
-
-      if (numParams === 2) {
-        if (typeof keyOrProps !== "string") {
-          throw new TypeError("Wrong property name type");
-        }
-        Object.defineProperty(up, keyOrProps, {
-          configurable: false,
-          enumerable: true,
-          writable: false,
-          value: value
-        });
-      } else if (numParams === 1) {
-        if (!isObject(keyOrProps)) {
-          throw new TypeError(
-            "Property parameter should be an object"
-          );
-        }
-        props = Object.keys(keyOrProps);
-        l = props.length;
-        for (i = 0; i < l; i += 1) {
-          name = props[i];
-          Object.defineProperty(up, name, {
-            value: keyOrProps[name],
-            configurable: false,
-            enumerable: true,
-            writable: name === "branches" || name === "version"
-          });
-        }
-      }
-
-      up.timestamp();
-
-      this.root.lastLeafVersion += 1;
-
-      Object.defineProperty(up, "version", {
-        value: this.root.lastLeafVersion,
-        configurable: false,
-        enumerable: true,
-        writable: false
-      });
-
-      Object.defineProperty(up, "branches", {
-        configurable: false,
-        enumerable: true,
-        writable: false,
-        value: []
-      });
-
-      Object.seal(up);
-
-      this.branches.push(up);
-
-      this.root.currentLeaf = up;
-
-      return up;
-    }
-  });
-
-  Object.defineProperty(Io, "fromJSON", {
-    configurable: false,
-    enumerable: false,
-    writable: false,
-    value: function(json) {
-      return Io.fromParsedJSON(JSON.parse(json));
-    }
-  });
 
   function walkBranches(branch, parent, parents, versions) {
-    var branches = branch.branches;
-    var l = branches.length;
-    var version;
-    var child;
-    var b;
-    for (b = 0; b < l; b += 1) {
-      child = branches[b];
-      version = child.version;
-      versions[version] = child;
-      parents[version] = parent;
-    }
+    branch.branches.forEach(function walkBranch(child) {
+      var childVersion = child.version;
+      versions[childVersion] = child;
+      parents[childVersion] = parent;
+    });
   }
 
-  Object.defineProperty(Io, "fromParsedJSON", {
+  function fromParsedJSON(obj) {
+    var root = io();
+    var branches = [];
+    var parents = [];
+    var branch;
+    var parent;
+    var i;
+    walkBranches(obj, root, parents, branches);
+    for (i = 1; i < branches.length; i += 1) {
+      branch = branches[i];
+      parent = parents[branch.version].branch(branch);
+      branches[i] = parent;
+      walkBranches(branch, parent, parents, branches);
+    }
+    root.currentBranch = branches[obj.view.version];
+    return root;
+  }
+
+  function fromJSON(json) {
+    return fromParsedJSON(JSON.parse(json));
+  }
+
+  function from(obj) {
+    var root = io();
+    root.branch(obj);
+    return root;
+  }
+
+  Object.defineProperty(io, "from", {
     configurable: false,
     enumerable: false,
     writable: false,
-    value: function(obj) {
-      var io = new Io(obj);
-      var branches = [];
-      var parents = [];
-      var branch;
-      var parent;
-      var i;
-      walkBranches(obj, io, parents, branches);
-      for (i = 1; i < branches.length; i += 1) {
-        branch = branches[i];
-        parent = parents[branch.version].up(branch);
-        branches[i] = parent;
-        walkBranches(branch, parent, parents, branches);
-      }
-      io.currentLeaf = branches[obj.view.version];
-      return io;
-    }
+    value: from
   });
 
-  Object.seal(Io.prototype);
-  Object.seal(Io);
-  global.Io = Io;
+  Object.defineProperty(io, "fromJSON", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: fromJSON
+  });
+
+  Object.defineProperty(io, "fromParsedJSON", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: fromParsedJSON
+  });
+
+  Object.defineProperty(io, "reservedPropertyNames", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: reservedPropertyNames
+  });
+
+  Object.freeze(reservedPropertyNames);
+  Object.freeze(fromParsedJSON);
+  Object.freeze(fromJSON);
+  Object.freeze(from);
+  Object.freeze(io);
+  global.io = io;
   // Closure compiler export
-  // window['Io'] = Io;
-  // Io.prototype['up'] = Io.prototype.up;
+  // global['io'] = io;
 }
-exportIo(this);
+exportIo(window);

@@ -3,7 +3,6 @@
 // @compilation_level ADVANCED_OPTIMIZATIONS
 // ==/ClosureCompiler==
 
-/*jslint forin: true */
 // Object.create polyfill
 (function() {
   "use strict";
@@ -34,31 +33,32 @@
 // Infinite Object
 (function(root) {
   "use strict";
-  /**
-   * @constructor
-   */
-  function Io() {
-    this.branches = [];
+  function branchFrom(parent) {
+    return function branchUsing(keyOrProps, value) {
+      var branch = Object.create(parent), key;
+
+      if (typeof keyOrProps === "string") {
+        branch[keyOrProps] = value;
+      } else if (typeof keyOrProps === "object") {
+        for (key in keyOrProps) {
+          branch[key] = keyOrProps[key];
+        }
+      }
+
+      branch.branch = branchFrom(branch);
+      parent.branches.push(branch);
+      branch.branches = [];
+      return branch;
+    };
   }
 
-  Io.prototype.up = function(keyOrProps, value) {
-    var up = Object.create(this), key;
+  function io() {
+    var root = { branches: [] };
+    root.branch = branchFrom(root);
+    return root;
+  }
 
-    if (typeof keyOrProps === "string") {
-      up[keyOrProps] = value;
-    } else if (typeof keyOrProps === "object") {
-      for (key in keyOrProps) {
-        up[key] = keyOrProps[key];
-      }
-    }
-
-    this.branches.push(up);
-    up.branches = [];
-    return up;
-  };
-
-  root.Io = Io;
+  root.io = io;
   // Closure compiler export
-  // window['Io'] = Io;
-  // Io.prototype['up'] = Io.prototype.up;
+  // root['io'] = io;
 })(this);

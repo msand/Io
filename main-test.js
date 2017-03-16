@@ -1,65 +1,3 @@
-Infinite Object (Io) - Version control tree using plain JavaScript and prototypical inheritance
-===============================================================================================
-
-## Infinite Object - minimal version
-Compiled Size:	119 bytes gzipped (126 bytes uncompressed)
-Minimal POC api: 
-```javascript
-(function() {
-  "use strict";
-  // Declare Io POC
-  function Io() {
-    this.tree = [];
-  }
-  Io.prototype.up = function() {
-    var a = Object.create(this);
-    this.tree.push(a);
-    a.tree = [];
-    return a;
-  };
-
-  // Create version tree
-  var root = new Io();
-
-  // Set values in root
-  root.key = "value";
-  root.key2 = { objects: "work" };
-
-  // Make a new branch using up()
-  var branch = root.up();
-
-  // Prototypical inheritance
-  console.log(Object.getPrototypeOf(branch) === root);
-  console.log(root.isPrototypeOf(branch));
-
-  // Set value in branch
-  branch.key = "value2";
-
-  // Version tree can be traversed from root
-  console.log(root.tree[0] === branch);
-
-  // Properties are inherited from parent
-  console.log(branch.key2 === root.key2);
-
-  // Branches override values
-  console.log(branch.key !== root.key);
-})();
-```
-
-## Infinite Object - small version
-Still small but slightly more usable api with polyfill to work in ES3
-```javascript
-var root = io();
-
-// Allows calling up with object
-root.branch({ testProp: "testValue4", anotherProp: "ECMAScript ftw" });
-
-// Version tree found in root.branches instead of root.tree
-```
-
-## Infinite Object - main version
-Proper api, requires ES5
-```javascript
 (function() {
   // Root and branches are immutable (frozen with Object.freeze) and thus
   // all properties are non-configurable and non-writable after creation
@@ -125,4 +63,3 @@ Proper api, requires ES5
   );
   var parsedArr = JSON.parse(jsonArr).map(io.fromParsedJSON);
 })();
-```
