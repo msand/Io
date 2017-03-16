@@ -1,0 +1,26 @@
+{
+  "name": "infinite-object",
+  "version": "1.0.0",
+  "description": "Version control tree using plain JavaScript and prototypical inheritance",
+  "main": "main.js",
+  "scripts": {
+    "test": "main.html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/msand/Io.git"
+  },
+  "keywords": [
+    "VCS",
+    "prototypical",
+    "inheritance",
+    "undo-redo",
+    "tree"
+  ],
+  "author": "Mikael Sand <msand@abo.fi> (http://github.com/msand)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/msand/Io/issues"
+  },
+  "homepage": "https://github.com/msand/Io#readme"
+}

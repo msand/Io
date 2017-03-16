@@ -1,4 +1,20 @@
-function exportIo(global) {
+/*jslint browser: true*/
+/*global define, module, window*/
+(function (factory) {
+  "use strict";
+  if (typeof define === "function" && define.amd) {
+    // AMD. Register as an anonymous module.
+    define([], factory);
+  } else if (typeof module === "object" && module.exports) {
+    // Node. Does not work with strict CommonJS, but
+    // only CommonJS-like environments that support module.exports,
+    // like Node.
+    module.exports = factory();
+  } else {
+    // Browser globals
+    window.io = factory();
+  }
+}(function ioFactory() {
   "use strict";
   function isObject(value) {
     try {
@@ -21,7 +37,7 @@ function exportIo(global) {
   }
 
   var reservedPropertyNames = ["branch", "branches", "version"];
-  
+
   var hasOwnProp = Object.prototype.hasOwnProperty;
 
   function io() {
@@ -270,8 +286,5 @@ function exportIo(global) {
   Object.freeze(fromJSON);
   Object.freeze(from);
   Object.freeze(io);
-  global.io = io;
-  // Closure compiler export
-  // global['io'] = io;
-}
-exportIo(window);
+  return io;
+}));
