@@ -32,8 +32,17 @@
   console.log(root.root === root);
   console.log(root === branch21.root);
 
+  function logger(branch) {
+    // Called with branch when current branch changes
+    console.log(branch);
+  }
+
+  root.on(logger);
+
   // Change version to parent branch
   root.currentBranch = Object.getPrototypeOf(branch211);
+
+  root.off(logger);
 
   // root.view === branchN.view contains an Object without prototype [Object.create(null)] which has all
   // the properties from the prototype chain (excluding view and branches) of the currently active branch.

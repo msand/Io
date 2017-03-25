@@ -48,6 +48,7 @@
 
   function io() {
     var root = {};
+    var listeners = [];
     var numVersions = 0;
     var currentBranch = root;
 
@@ -57,6 +58,36 @@
       writable: false,
       value: root
     });
+
+    Object.defineProperty(root, "on", {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: Object.freeze(function on(listener) {
+        listeners.push(listener);
+      })
+    });
+
+    Object.defineProperty(root, "off", {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: Object.freeze(function off(listener) {
+        var index = listeners.indexOf(listener);
+        while (index !== -1) {
+          listeners.splice(index, 1);
+          index = listeners.indexOf(listener);
+        }
+      })
+    });
+    
+    function notifyListener(listener) {
+      listener(currentBranch);
+    }
+
+    function emit() {
+      listeners.forEach(notifyListener);
+    }
 
     function branchFrom(parent, addBranch) {
       return function branchUsing(keyOrProps, value) {
@@ -84,7 +115,7 @@
           });
         } else if (numParams === 1) {
           if (!isObject(keyOrProps)) {
-            throw new TypeError("Props must be object");
+            throw new TypeError("Argument must be object");
           }
           Object.keys(keyOrProps).forEach(function setProp(key) {
             if (reservedPropertyNames.indexOf(key) !== -1) {
@@ -193,7 +224,11 @@
             obj = Object.getPrototypeOf(obj);
           }
         }
+
         currentBranch = branch;
+
+        emit();
+
         return currentBranch;
       }
     });

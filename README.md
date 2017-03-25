@@ -94,8 +94,17 @@ Proper api, requires ES5
   console.log(root.root === root);
   console.log(root === branch21.root);
 
+  function logger(branch) {
+    // Called with branch when current branch changes
+    console.log(branch);
+  }
+    
+  root.on(logger);
+
   // Change version to parent branch
   root.currentBranch = Object.getPrototypeOf(branch211);
+  
+  root.off(logger);
 
   // root.view === branchN.view contains an Object without prototype [Object.create(null)] which has all
   // the properties from the prototype chain (excluding root) of the currently active branch.
@@ -125,4 +134,11 @@ Proper api, requires ES5
   );
   var parsedArr = JSON.parse(jsonArr).map(io.fromParsedJSON);
 })();
+```
+
+## Infinite Object - module version
+Proper api, requires ES6, uses Proxy api for immutable branches/array behavior
+```javascript
+import io from 'infinite-object';
+var root = io();
 ```

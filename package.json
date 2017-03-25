@@ -1,10 +1,13 @@
 {
   "name": "infinite-object",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Version control tree using plain JavaScript and prototypical inheritance",
   "main": "main.js",
+  "module": "main.es2015.js",
+  "jsnext:main": "main.es2015.js",
   "scripts": {
-    "test": "main.html"
+    "test": "main.html",
+    "lint": "eslint main.es2015.js"
   },
   "repository": {
     "type": "git",
@@ -22,5 +25,8 @@
   "bugs": {
     "url": "https://github.com/msand/Io/issues"
   },
-  "homepage": "https://github.com/msand/Io#readme"
+  "homepage": "https://github.com/msand/Io#readme",
+  "devDependencies": {
+    "eslint": "^3.18.0"
+  }
 }
