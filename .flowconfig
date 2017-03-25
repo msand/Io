@@ -1,0 +1,11 @@
+[ignore]
+
+[include]
+main.es2015.js
+main.js
+small_polyfilled.js
+minimal.js
+
+[libs]
+
+[options]

@@ -3,8 +3,9 @@
 /*property
  amd, apply, branch, branches, call, configurable, create, currentBranch,
  defineProperty, enumerable, exports, forEach, freeze, get, getPrototypeOf,
- hasOwnProperty, indexOf, io, isPrototypeOf, keys, length, map, numVersions,
- parse, prototype, push, set, slice, value, version, view, writable
+ hasOwnProperty, indexOf, io, isPrototypeOf, join, keys, length, map,
+ numVersions, parse, prototype, push, set, slice, splice, value, version,
+ view, writable
  */
 (function ioExporter(factory) {
   "use strict";
@@ -104,7 +105,7 @@
               reservedPropertyNames.indexOf(keyOrProps) !== -1
           ) {
             throw new TypeError(
-              "Key must be string and not in: " + reservedPropertyNames
+              "Key must be string and not in: " + reservedPropertyNames.join()
             );
           }
           Object.defineProperty(branch, keyOrProps, {

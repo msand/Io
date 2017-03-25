@@ -81,7 +81,7 @@ function io() {
     listeners.forEach(notifyListener);
   }
 
-  function branchFrom(parent, addBranch) {
+  function branchFrom(parent, parentBranches) {
     return function branchUsing(...args) {
       const numParams = args.length;
       if (numParams === 0 || numParams > 2) {
@@ -96,7 +96,7 @@ function io() {
           typeof key !== "string" || reservedPropertyNames.indexOf(key) !== -1
         ) {
           throw new TypeError(
-            "Key must be string and not in: " + reservedPropertyNames
+            "Key must be string and not in: " + reservedPropertyNames.join()
           );
         }
         Object.defineProperty(branch, key, {
@@ -138,28 +138,23 @@ function io() {
 
       const branchesView = new Proxy(branches, immutableArrayViewer);
 
-      function addBranchToParent(branch) {
-        branches.push(branch);
-      }
-
       Object.defineProperty(branch, "branches", {
         configurable: false,
         enumerable: true,
-        get: function getBranches() {
-          return branchesView;
-        }
+        writable: false,
+        value: Object.freeze(branchesView)
       });
 
       Object.defineProperty(branch, "branch", {
         configurable: false,
         enumerable: false,
         writable: false,
-        value: Object.freeze(branchFrom(branch, addBranchToParent))
+        value: Object.freeze(branchFrom(branch, branches))
       });
 
       Object.freeze(branch);
 
-      addBranch(branch);
+      parentBranches.push(branch);
 
       root.currentBranch = branch;
 
@@ -229,23 +224,18 @@ function io() {
   const rootBranches = [];
   const branchesView = new Proxy(rootBranches, immutableArrayViewer);
 
-  function addBranch(branch) {
-    rootBranches.push(branch);
-  }
-
   Object.defineProperty(root, "branch", {
     configurable: false,
     enumerable: false,
     writable: false,
-    value: Object.freeze(branchFrom(root, addBranch))
+    value: Object.freeze(branchFrom(root, rootBranches))
   });
 
   Object.defineProperty(root, "branches", {
     configurable: false,
     enumerable: true,
-    get: function getBranches() {
-      return branchesView;
-    }
+    writable: false,
+    value: Object.freeze(branchesView)
   });
 
   Object.freeze(root);
