@@ -5,9 +5,9 @@
 // @compilation_level ADVANCED_OPTIMIZATIONS
 // ==/ClosureCompiler==
 
-// Object.create polyfill
 (function() {
   "use strict";
+  // Object.create polyfill
   if (typeof Object.create !== "function") {
     Object.create = (function() {
       /**
@@ -28,13 +28,10 @@
         NewObject.prototype = {};
         return result;
       };
-    }());
+    })();
   }
-}());
 
-// Object.assign polyfill
-(function() {
-  "use strict";
+  // Object.assign polyfill
   if (typeof Object.assign !== "function") {
     /* eslint-disable no-unused-vars */
     Object.assign = function(
@@ -42,7 +39,8 @@
       ignore // .length of function is 2
     ) {
       if (
-        target === null || target === undefined // TypeError if undefined or null
+        target === null ||
+        target === undefined // TypeError if undefined or null
       ) {
         throw new TypeError("Cannot convert undefined or null to object");
       }
@@ -56,7 +54,8 @@
         nextSource = arguments[index];
 
         if (
-          nextSource !== null && nextSource !== undefined // Skip over if undefined or null
+          nextSource !== null &&
+          nextSource !== undefined // Skip over if undefined or null
         ) {
           for (nextKey in nextSource) {
             // Avoid bugs when hasOwnProperty is shadowed
@@ -69,11 +68,8 @@
       return to;
     };
   }
-}());
 
-// Infinite Object
-(function() {
-  "use strict";
+  // Infinite Object
   function branchFrom(parent) {
     return function branchUsing(keyOrProps, value) {
       var branch = Object.create(parent);
@@ -99,4 +95,4 @@
   }
 
   window["io"] = io;
-}());
+})();

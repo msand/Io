@@ -1,74 +1,82 @@
-(function() {
-  // Root and branches are immutable (frozen with Object.freeze) and thus
-  // all properties are non-configurable and non-writable after creation
-  var root = io();
-  var infiniteWhiteSpaceCollection = [root];
-  var branch1 = root.branch("testProp", "testValue");
-  var branch2 = root.branch("testProp", "testValue2");
-  var branch21 = branch2.branch({
-    testProp: "testValue4",
-    anotherProp: "ECMAScript ftw"
-  });
-  // var reservedPropertyNames = ["branch", "branches", "version"];
+/*eslint no-console: ["error", { allow: ["log"] }] */
+import io from "./main.js";
 
-  // Version tree found in root.branches instead of root.tree
-  console.log(root.branches[0] === branch1);
+// Root and branches are immutable (frozen with Object.freeze) and thus
+// all properties are non-configurable and non-writable after creation
+const root = io();
+const infiniteWhiteSpaceCollection = [root];
+const branch1 = root.branch("testProp", "testValue");
+const branch2 = root.branch("testProp", "testValue2");
+const branch21 = branch2.branch({
+  testProp: "testValue4",
+  anotherProp: "ECMAScript ftw"
+});
+// var reservedPropertyNames = ["branch", "branches", "version"];
 
-  // Branches have a version number
-  console.log(branch1.version === 0);
-  console.log(branch1.version + 1 === branch2.version);
+// Version tree found in root.branches instead of root.tree
+console.log(root.branches[0] === branch1);
 
-  // The root (and thus branches) has a reference to the current branch
-  console.log(root.currentBranch === branch21.currentBranch);
-  console.log(root.currentBranch === branch21);
+// Branches have a version number
+console.log(branch1.version === 0);
+console.log(branch1.version + 1 === branch2.version);
 
-  var branch11 = branch1.branch("testProp", "testValue3");
-  var branch211 = branch21.branch({ newProp: ":D" });
+// The root (and thus branches) has a reference to the current branch
+console.log(root.currentBranch === branch21.currentBranch);
+console.log(root.currentBranch === branch21);
 
-  // Branch changes on branching
-  console.log(root.currentBranch === branch211);
+const branch11 = branch1.branch("testProp", "testValue3");
+const branch211 = branch21.branch({ newProp: ":D" });
 
-  // The root (and thus branches) has a reference to the root
-  console.log(root.root === root);
-  console.log(root === branch21.root);
+// Branch changes on branching
+console.log(root.currentBranch === branch211);
 
-  function logger(branch) {
-    // Called with branch when current branch changes
-    console.log(branch);
-  }
+// The root (and thus branches) has a reference to the root
+console.log(root.root === root);
+console.log(root === branch21.root);
 
-  root.on(logger);
+function logger(branch) {
+  // Called with branch when current branch changes
+  console.log(branch);
+}
 
-  // Change version to parent branch
-  root.currentBranch = Object.getPrototypeOf(branch211);
+const off = root.on(logger);
 
-  root.off(logger);
+// Change version to parent branch
+root.currentBranch = Object.getPrototypeOf(branch211);
 
-  // root.view === branchN.view contains an Object without prototype [Object.create(null)] which has all
-  // the properties from the prototype chain (excluding view and branches) of the currently active branch.
-  // Enabling fast existence checking of and access to the current properties,
-  // without repeated prototype chain traversal.
-  var view = root.view;
-  for (var key in view) {
-    console.log(key in branch21 && view[key] === branch21[key]);
-  }
-  for (var key in branch21) {
-    console.log(
-      root.hasOwnProperty(key) || key in view && view[key] === branch21[key]
-    );
-  }
+root.off(logger);
 
-  // Every branch has a timestamp
-  console.log(branch11.date <= branch211.date);
+// Or call return value of on to unsubscribe
+off();
 
-  // Can de/serialize from/to JSON
-  var jsonIo = JSON.stringify(root);
-  var parsedIo = io.fromJSON(jsonIo);
-  var reStringified = JSON.stringify(parsedIo);
-  console.log("JSON idempotent: " + (reStringified === jsonIo));
-
-  var jsonArr = document.getElementById("output").innerHTML = JSON.stringify(
-    infiniteWhiteSpaceCollection
+// root.view === branchN.view contains an Object without prototype [Object.create(null)] which has all
+// the properties from the prototype chain (excluding view and branches) of the currently active branch.
+// Enabling fast existence checking of and access to the current properties,
+// without repeated prototype chain traversal.
+const view = root.view;
+let key;
+for (key in view) {
+  console.log(key in branch21 && view[key] === branch21[key]);
+}
+for (key in branch21) {
+  console.log(
+    root.hasOwnProperty(key) || (key in view && view[key] === branch21[key])
   );
-  var parsedArr = JSON.parse(jsonArr).map(io.fromParsedJSON);
-})();
+}
+
+// Every branch has a timestamp
+console.log(branch11.date <= branch211.date);
+
+// Can de/serialize from/to JSON
+const jsonIo = JSON.stringify(root);
+const parsedIo = io.fromJSON(jsonIo);
+const reStringified = JSON.stringify(parsedIo);
+console.log("JSON idempotent: " + (reStringified === jsonIo));
+
+const jsonArr = (document.getElementById("output").innerHTML = JSON.stringify(
+  infiniteWhiteSpaceCollection
+));
+
+const parsedArr = JSON.parse(jsonArr).map(io.fromParsedJSON);
+
+console.log(parsedArr);

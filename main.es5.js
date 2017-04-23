@@ -1,7 +1,3 @@
-/*eslint-env browser, node, es6 */
-/*jslint white: true, es6: true*/
-/*jshint esversion: 6*/
-
 function isObject(value) {
   try {
     Object.create(value);
@@ -22,27 +18,17 @@ function timestamp(obj) {
   }
 }
 
-const reservedPropertyNames = ["branch", "branches", "version"];
+var reservedPropertyNames = ["branch", "branches", "version"];
 
-const hasOwnProp = Object.prototype.hasOwnProperty;
+var reservedNames = reservedPropertyNames.join();
 
-function immutable() {
-  throw new Error("Immutable");
-}
-
-const immutableArrayViewer = {
-  isExtensible: () => false,
-  preventExtensions: immutable,
-  defineProperty: immutable,
-  deleteProperty: immutable,
-  set: immutable
-};
+var hasOwnProp = Object.prototype.hasOwnProperty;
 
 function io() {
-  const root = {};
-  let numVersions = 0;
-  const listeners = [];
-  let currentBranch = root;
+  var root = {};
+  var listeners = [];
+  var numVersions = 0;
+  var currentBranch = root;
 
   Object.defineProperty(root, "root", {
     configurable: false,
@@ -57,6 +43,9 @@ function io() {
     writable: false,
     value: Object.freeze(function on(listener) {
       listeners.push(listener);
+      return function off() {
+        root.off(listener);
+      };
     })
   });
 
@@ -65,7 +54,7 @@ function io() {
     enumerable: false,
     writable: false,
     value: Object.freeze(function off(listener) {
-      let index = listeners.indexOf(listener);
+      var index = listeners.indexOf(listener);
       while (index !== -1) {
         listeners.splice(index, 1);
         index = listeners.indexOf(listener);
@@ -81,41 +70,40 @@ function io() {
     listeners.forEach(notifyListener);
   }
 
-  function branchFrom(parent, parentBranches) {
-    return function branchUsing(...args) {
-      const numParams = args.length;
+  function branchFrom(parent, addBranch) {
+    return function branchUsing(keyOrProps, value) {
+      var numParams = arguments.length;
       if (numParams === 0 || numParams > 2) {
         throw new Error("Wrong number of parameters");
       }
 
-      const branch = Object.create(parent);
+      var branch = Object.create(parent);
 
       if (numParams === 2) {
-        const [key, value] = args;
         if (
-          typeof key !== "string" || reservedPropertyNames.indexOf(key) !== -1
+          typeof keyOrProps !== "string" ||
+          reservedPropertyNames.indexOf(keyOrProps) !== -1
         ) {
           throw new TypeError(
-            "Key must be string and not in: " + reservedPropertyNames.join()
+            "Key must be string and not in: " + reservedNames
           );
         }
-        Object.defineProperty(branch, key, {
+        Object.defineProperty(branch, keyOrProps, {
           configurable: false,
           enumerable: true,
           writable: false,
           value: value
         });
       } else if (numParams === 1) {
-        const [props] = args;
-        if (!isObject(props)) {
+        if (!isObject(keyOrProps)) {
           throw new TypeError("Argument must be object");
         }
-        Object.keys(props).forEach(function setProp(key) {
+        Object.keys(keyOrProps).forEach(function setProp(key) {
           if (reservedPropertyNames.indexOf(key) !== -1) {
             return;
           }
           Object.defineProperty(branch, key, {
-            value: props[key],
+            value: keyOrProps[key],
             configurable: false,
             enumerable: true,
             writable: false
@@ -134,27 +122,32 @@ function io() {
 
       numVersions += 1;
 
-      const branches = [];
+      var branches = [];
+      var branchesView = Object.freeze(branches.slice());
 
-      const branchesView = new Proxy(branches, immutableArrayViewer);
+      function addBranchAndUpdateView(branch) {
+        branches.push(branch);
+        branchesView = Object.freeze(branches.slice());
+      }
 
       Object.defineProperty(branch, "branches", {
         configurable: false,
         enumerable: true,
-        writable: false,
-        value: Object.freeze(branchesView)
+        get: function getBranches() {
+          return branchesView;
+        }
       });
 
       Object.defineProperty(branch, "branch", {
         configurable: false,
         enumerable: false,
         writable: false,
-        value: Object.freeze(branchFrom(branch, branches))
+        value: Object.freeze(branchFrom(branch, addBranchAndUpdateView))
       });
 
       Object.freeze(branch);
 
-      parentBranches.push(branch);
+      addBranch(branch);
 
       root.currentBranch = branch;
 
@@ -170,7 +163,7 @@ function io() {
     }
   });
 
-  let view = Object.create(null);
+  var view = Object.create(null);
 
   Object.defineProperty(root, "view", {
     configurable: false,
@@ -206,7 +199,7 @@ function io() {
         });
       } else {
         view = Object.create(null);
-        let obj = branch;
+        var obj = branch;
         while (obj !== root) {
           Object.keys(obj).forEach(setViewProp);
           obj = Object.getPrototypeOf(obj);
@@ -221,21 +214,27 @@ function io() {
     }
   });
 
-  const rootBranches = [];
-  const branchesView = new Proxy(rootBranches, immutableArrayViewer);
+  var rootBranches = [];
+  var branchesView = Object.freeze(rootBranches.slice());
+
+  function addBranchAndUpdateView(branch) {
+    rootBranches.push(branch);
+    branchesView = Object.freeze(rootBranches.slice());
+  }
 
   Object.defineProperty(root, "branch", {
     configurable: false,
     enumerable: false,
     writable: false,
-    value: Object.freeze(branchFrom(root, rootBranches))
+    value: Object.freeze(branchFrom(root, addBranchAndUpdateView))
   });
 
   Object.defineProperty(root, "branches", {
     configurable: false,
     enumerable: true,
-    writable: false,
-    value: Object.freeze(branchesView)
+    get: function getBranches() {
+      return branchesView;
+    }
   });
 
   Object.freeze(root);
@@ -245,21 +244,21 @@ function io() {
 
 function walkBranches(source, sources, parents, branch) {
   source.branches.forEach(function walkBranch(child) {
-    const childVersion = child.version;
+    var childVersion = child.version;
     sources[childVersion] = child;
     parents[childVersion] = branch;
   });
 }
 
 function fromParsedJSON(obj) {
-  const root = io();
-  const versions = [];
+  var root = io();
+  var versions = [];
   versions.length = obj.numVersions;
-  const parents = Array.apply(null, versions);
-  const sources = Array.apply(null, versions);
+  var parents = Array.apply(null, versions);
+  var sources = Array.apply(null, versions);
   walkBranches(obj, sources, parents, root);
-  const branches = sources.map(function importBranch(source) {
-    const branch = parents[source.version].branch(source);
+  var branches = sources.map(function importBranch(source) {
+    var branch = parents[source.version].branch(source);
     walkBranches(source, sources, parents, branch);
     return branch;
   });
@@ -272,7 +271,7 @@ function fromJSON(json) {
 }
 
 function from(obj) {
-  const root = io();
+  var root = io();
   root.branch(obj);
   return root;
 }

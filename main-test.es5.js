@@ -1,4 +1,5 @@
-import io from "./main.es2015.js";
+/*eslint no-console: ["error", { allow: ["log"] }] */
+import io from "./main.es5.js";
 
 // Root and branches are immutable (frozen with Object.freeze) and thus
 // all properties are non-configurable and non-writable after creation
@@ -38,24 +39,28 @@ function logger(branch) {
   console.log(branch);
 }
 
-root.on(logger);
+var off = root.on(logger);
 
 // Change version to parent branch
 root.currentBranch = Object.getPrototypeOf(branch211);
 
 root.off(logger);
 
+// Or call return value of on to unsubscribe
+off();
+
 // root.view === branchN.view contains an Object without prototype [Object.create(null)] which has all
 // the properties from the prototype chain (excluding view and branches) of the currently active branch.
 // Enabling fast existence checking of and access to the current properties,
 // without repeated prototype chain traversal.
 var view = root.view;
-for (var key in view) {
+var key;
+for (key in view) {
   console.log(key in branch21 && view[key] === branch21[key]);
 }
-for (var key in branch21) {
+for (key in branch21) {
   console.log(
-    root.hasOwnProperty(key) || key in view && view[key] === branch21[key]
+    root.hasOwnProperty(key) || (key in view && view[key] === branch21[key])
   );
 }
 
@@ -68,8 +73,10 @@ var parsedIo = io.fromJSON(jsonIo);
 var reStringified = JSON.stringify(parsedIo);
 console.log("JSON idempotent: " + (reStringified === jsonIo));
 
-var jsonArr = document.getElementById("output").innerHTML = JSON.stringify(
+var jsonArr = (document.getElementById("output").innerHTML = JSON.stringify(
   infiniteWhiteSpaceCollection
-);
+));
 
 var parsedArr = JSON.parse(jsonArr).map(io.fromParsedJSON);
+
+console.log(parsedArr);

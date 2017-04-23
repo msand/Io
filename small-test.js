@@ -1,3 +1,4 @@
+/*global io*/
 var root = io();
 
 // Allows creating branch using object

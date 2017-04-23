@@ -1,3 +1,4 @@
+/*eslint no-console: ["error", { allow: ["log"] }] */
 (function() {
   "use strict";
   // Declare Io POC

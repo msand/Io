@@ -1,16 +1,11 @@
-// ==ClosureCompiler==
-// @compilation_level SIMPLE_OPTIMIZATIONS
-// ==/ClosureCompiler==
-
 /**
  * Io version tree: var root = new Io(); var branch = root.up();
  * @constructor
  */
-window["Io"] = function() {
+var Io = (window.Io = function Io() {
   this.tree = [];
-};
-
-Io.prototype["up"] = function() {
+});
+Io.prototype.up = function up() {
   var up = Object.create(this);
   this.tree.push(up);
   up.tree = [];
